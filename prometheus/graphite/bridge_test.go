@@ -16,6 +16,7 @@ package graphite
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -25,10 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prometheus/common/model"
-	"golang.org/x/net/context"
-
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/model"
 )
 
 func TestSanitize(t *testing.T) {
