@@ -16,6 +16,7 @@ package prometheus
 import (
 	"bytes"
 	"fmt"
+	"github.com/spaolacci/murmur3"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -867,25 +868,26 @@ func checkMetricConsistency(
 	}
 
 	// Is the metric unique (i.e. no other metric with the same name and the same labels)?
-	h := hashNew()
-	h = hashAdd(h, name)
-	h = hashAddByte(h, separatorByte)
+	h := murmur3.New64()
+	h.Write([]byte(name))
+	h.Write([]byte{separatorByte})
 	// Make sure label pairs are sorted. We depend on it for the consistency
 	// check.
 	sort.Sort(labelPairSorter(dtoMetric.Label))
 	for _, lp := range dtoMetric.Label {
-		h = hashAdd(h, lp.GetName())
-		h = hashAddByte(h, separatorByte)
-		h = hashAdd(h, lp.GetValue())
-		h = hashAddByte(h, separatorByte)
+		h.Write([]byte(lp.GetName()))
+		h.Write([]byte{separatorByte})
+		h.Write([]byte(lp.GetValue()))
+		h.Write([]byte{separatorByte})
 	}
-	if _, exists := metricHashes[h]; exists {
+	hs := h.Sum64()
+	if _, exists := metricHashes[hs]; exists {
 		return fmt.Errorf(
 			"collected metric %q { %s} was collected before with the same name and label values",
 			name, dtoMetric,
 		)
 	}
-	metricHashes[h] = struct{}{}
+	metricHashes[hs] = struct{}{}
 	return nil
 }
 

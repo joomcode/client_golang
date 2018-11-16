@@ -16,6 +16,7 @@ package prometheus
 import (
 	"errors"
 	"fmt"
+	"github.com/spaolacci/murmur3"
 	"sort"
 	"strings"
 
@@ -125,24 +126,24 @@ func NewDesc(fqName, help string, variableLabels []string, constLabels Labels) *
 		return d
 	}
 
-	vh := hashNew()
+	vh := murmur3.New64()
 	for _, val := range labelValues {
-		vh = hashAdd(vh, val)
-		vh = hashAddByte(vh, separatorByte)
+		_, _ = vh.Write([]byte(val))
+		_, _ = vh.Write([]byte{separatorByte})
 	}
-	d.id = vh
+	d.id = vh.Sum64()
 	// Sort labelNames so that order doesn't matter for the hash.
 	sort.Strings(labelNames)
 	// Now hash together (in this order) the help string and the sorted
 	// label names.
-	lh := hashNew()
-	lh = hashAdd(lh, help)
-	lh = hashAddByte(lh, separatorByte)
+	lh := murmur3.New64()
+	_, _ = lh.Write([]byte(help))
+	_, _ = lh.Write([]byte{separatorByte})
 	for _, labelName := range labelNames {
-		lh = hashAdd(lh, labelName)
-		lh = hashAddByte(lh, separatorByte)
+		_, _ = lh.Write([]byte(labelName))
+		_, _ = lh.Write([]byte{separatorByte})
 	}
-	d.dimHash = lh
+	d.dimHash = lh.Sum64()
 
 	d.constLabelPairs = make([]*dto.LabelPair, 0, len(constLabels))
 	for n, v := range constLabels {
